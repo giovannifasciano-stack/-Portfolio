@@ -69,6 +69,9 @@ body::before{content:'';position:fixed;inset:0;opacity:.025;pointer-events:none;
 .ico-a{background:rgba(59,130,246,.12);color:#60a5fa}
 .ico-g{background:rgba(52,211,153,.12);color:#34d399}
 .ico-n{background:rgba(167,139,250,.12);color:#a78bfa}
+.ico-s{background:rgba(251,146,60,.12);color:#fb923c}
+.sec-div{display:flex;align-items:center;gap:12px;margin:26px 2px 14px;font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu)}
+.sec-div::before,.sec-div::after{content:'';height:.5px;background:var(--b1);flex:1}
 .c-name{font-family:'Outfit',sans-serif;font-weight:700;font-size:14px}
 .c-sub{font-size:10px;color:var(--mu);margin-top:2px;letter-spacing:.04em}
 .c-right{text-align:right;min-width:110px}
@@ -200,6 +203,39 @@ body::before{content:'';position:fixed;inset:0;opacity:.025;pointer-events:none;
     </div>
   </div>
 
+  <div class="sec-div"><span>SpaceX</span></div>
+
+  <div class="total">
+    <div class="total-lbl">SpaceX Portfolio Value <span class="total-mode" id="total-mode2">—</span></div>
+    <div class="total-val">
+      <span class="total-curr">$</span>
+      <span class="total-int" id="t2-int">0</span>
+      <span class="total-dec" id="t2-dec">.00</span>
+    </div>
+    <div class="total-rows">
+      <div class="total-row">SPCX <b id="m-spcx">—</b></div>
+    </div>
+  </div>
+
+  <!-- SPCX -->
+  <div class="card" id="card-SPCX">
+    <div class="c-top">
+      <div class="c-left">
+        <div class="c-ico ico-s">SPCX</div>
+        <div><div class="c-name">SpaceX</div><div class="c-sub">NASDAQ · SPCX</div></div>
+      </div>
+      <div class="c-right">
+        <div class="c-price" id="px-SPCX">—</div>
+        <div class="c-chg neu" id="chg-SPCX">loading...</div>
+        <span class="sess-tag" id="sess-SPCX"></span>
+      </div>
+    </div>
+    <div class="c-bot">
+      <div class="inp-wrap"><div class="inp-lbl">Shares</div><input class="qty" type="number" id="q-SPCX" placeholder="0" min="0" inputmode="decimal"></div>
+      <div class="val-wrap"><div class="val-lbl">Value</div><div class="val-num zero" id="v-SPCX">—</div></div>
+    </div>
+  </div>
+
   <div class="refresh-row">
     <div class="countdown" id="countdown-row" style="display:none">
       <span id="cd-txt">—</span>
@@ -235,7 +271,9 @@ body::before{content:'';position:fixed;inset:0;opacity:.025;pointer-events:none;
    ───────────────────────────────────────────────────────────── */
 const SELF_PROXY = '';
 
-const SYMS = ['AAPL','GOOGL','NVDA'];
+const SYMS = ['AAPL','GOOGL','NVDA','SPCX'];
+const MAIN = ['AAPL','GOOGL','NVDA'];
+const SPX  = ['SPCX'];
 const prices = {}, prevClose = {};
 let cdTimer = null, cdVal = 15, lastSource = '—';
 const REFRESH = 15; // secondi
@@ -257,9 +295,12 @@ function updatePill() {
   dot.className = 'pill-dot ' + (s==='closed'?'closed-ext':s);
   txt.textContent = s==='open'?'Market Open':s==='pre'?'Pre-Market':s==='after'?'After Hours':'Market Closed';
   // total panel mode badge
-  const tm = document.getElementById('total-mode');
-  if(s==='open'){tm.textContent='Real Time';tm.className='total-mode rt';}
-  else{tm.textContent='Ext. Hours';tm.className='total-mode ext';}
+  ['total-mode','total-mode2'].forEach(id=>{
+    const tm = document.getElementById(id);
+    if(!tm) return;
+    if(s==='open'){tm.textContent='Real Time';tm.className='total-mode rt';}
+    else{tm.textContent='Ext. Hours';tm.className='total-mode ext';}
+  });
 }
 
 // ── Format ──
@@ -303,20 +344,23 @@ function renderPrice(sym, price, pc, state) {
   calcTotal();
 }
 
-// ── Total ──
+// ── Totals (due totali separati) ──
+function symValue(s){
+  const qty = parseFloat(document.getElementById('q-'+s).value)||0;
+  const p = prices[s];
+  const vEl = document.getElementById('v-'+s);
+  const mEl = document.getElementById('m-'+s.toLowerCase());
+  if(p && qty>0){const v=qty*p;vEl.textContent=usd(v);vEl.classList.remove('zero');if(mEl)mEl.textContent=usd(v);return v;}
+  vEl.textContent='—';vEl.classList.add('zero');if(mEl)mEl.textContent='—';return 0;
+}
+function writeTotal(pfx,val){
+  const[i,d]=val.toFixed(2).split('.');
+  document.getElementById(pfx+'-int').textContent=parseInt(i).toLocaleString('en-US');
+  document.getElementById(pfx+'-dec').textContent='.'+d;
+}
 function calcTotal() {
-  let tot = 0;
-  SYMS.forEach(s => {
-    const qty = parseFloat(document.getElementById('q-'+s).value)||0;
-    const p = prices[s];
-    const vEl = document.getElementById('v-'+s);
-    const mEl = document.getElementById('m-'+s.toLowerCase());
-    if(p && qty>0){const v=qty*p;tot+=v;vEl.textContent=usd(v);vEl.classList.remove('zero');mEl.textContent=usd(v);}
-    else{vEl.textContent='—';vEl.classList.add('zero');mEl.textContent='—';}
-  });
-  const[i,d]=tot.toFixed(2).split('.');
-  document.getElementById('t-int').textContent=parseInt(i).toLocaleString('en-US');
-  document.getElementById('t-dec').textContent='.'+d;
+  let a=0; MAIN.forEach(s=>a+=symValue(s)); writeTotal('t', a);
+  let b=0; SPX.forEach(s=>b+=symValue(s)); writeTotal('t2', b);
 }
 SYMS.forEach(s=>{
   const el=document.getElementById('q-'+s);
